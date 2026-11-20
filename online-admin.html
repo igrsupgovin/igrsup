@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ऑनलाइन रिकॉर्ड प्रबंधन — स्वतंत्र डेमो</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f5f8;color:#1f2937;font-family:Arial,"Noto Sans Devanagari",sans-serif}
+.wrap{max-width:1120px;margin:24px auto;padding:0 14px}.head{background:#123f68;color:#fff;padding:20px;border-radius:8px}
+.notice{background:#fff4d6;border:1px solid #e6c65c;padding:12px 14px;border-radius:7px;margin:14px 0;line-height:1.5}
+.card{background:#fff;border:1px solid #e1e5ea;border-radius:8px;padding:18px;margin:14px 0;box-shadow:0 2px 8px #0000000a}
+h2,h3{margin-top:0}form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+label{font-size:14px;font-weight:600}input,textarea{display:block;width:100%;padding:10px;border:1px solid #b8c0ca;border-radius:5px;margin-top:5px;font:inherit;color:#111;background:#fff}
+textarea{min-height:66px;resize:vertical}.full{grid-column:1/-1}.buttons{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button{border:0;border-radius:5px;padding:10px 15px;background:#14558a;color:white;cursor:pointer;font-size:14px}button.gray{background:#64748b}button.red{background:#b42318}button:disabled{opacity:.55;cursor:not-allowed}
+.muted{color:#667085;font-size:13px}.status{min-height:20px;font-size:14px;color:#17633a}.error{color:#b42318}.hidden{display:none!important}
+table{width:100%;border-collapse:collapse;margin-top:12px;background:#fff}th,td{padding:9px;border:1px solid #d8dde4;text-align:left;font-size:14px}th{background:#edf2f7}td a{color:#07589a;word-break:break-all}
+@media(max-width:700px){form{grid-template-columns:1fr}.full{grid-column:auto}.wrap{margin:12px auto}table{display:block;overflow-x:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <h2>ऑनलाइन रिकॉर्ड प्रबंधन</h2>
+    <div>स्वतंत्र निजी रिकॉर्ड डेमो — यह किसी सरकारी विभाग या सरकारी पोर्टल की सेवा नहीं है।</div>
+  </header>
+  <div class="notice"><b>गोपनीयता सूचना:</b> इस सिस्टम में जो रिकॉर्ड सेव किया जाएगा, उसका विवरण उस व्यक्ति को दिखेगा जिसके पास उसका निजी रिकॉर्ड URL होगा। केवल वही जानकारी डालें जिसे साझा करने की अनुमति है। यह सरकारी प्रमाणपत्र या पंजीकरण की पुष्टि नहीं करता।</div>
+
+  <section class="card" id="loginCard">
+    <h3>Admin Login</h3>
+    <p class="muted">रिकॉर्ड मैनेज करने के लिए अधिकृत Admin अकाउंट से लॉगिन करें। Public Sign-up उपलब्ध नहीं है।</p>
+    <form id="loginForm">
+      <label>Email<input id="email" type="email" autocomplete="username" required></label>
+      <label>Password<input id="password" type="password" autocomplete="current-password" required></label>
+      <div class="full buttons"><button id="loginBtn" type="submit">Login</button></div>
+    </form>
+    <p class="status" id="loginStatus" aria-live="polite"></p>
+  </section>
+
+  <div id="adminArea" class="hidden">
+    <section class="card">
+      <div class="buttons" style="justify-content:space-between">
+        <div><b id="signedInEmail"></b><div class="muted">Admin session active</div></div>
+        <button id="logoutBtn" type="button" class="gray">Logout</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3 id="formHeading">नया रिकॉर्ड जोड़ें</h3>
+      <form id="recordForm">
+        <label>आवेदन संख्या<input id="app" required></label>
+        <label>वर का नाम<input id="groom" required></label>
+        <label>वधु का नाम<input id="bride" required></label>
+        <label>विवाह स्थल<textarea id="venue"></textarea></label>
+        <label>जनपद<input id="district"></label>
+        <label>तहसील<input id="tehsil"></label>
+        <label>उपनिबंधक<input id="subreg"></label>
+        <label>विवाह का दिनांक<input id="eventDate" placeholder="DD-MM-YYYY"></label>
+        <label>पंजीकरण स०<input id="regno"></label>
+        <label>पंजीकरण दिनांक<input id="regdate" placeholder="DD-MM-YYYY"></label>
+        <div class="full buttons">
+          <button id="saveBtn" type="submit">रिकॉर्ड सेव करें</button>
+          <button id="clearBtn" type="button" class="gray">फॉर्म साफ करें</button>
+        </div>
+      </form>
+      <p id="saveStatus" class="status" aria-live="polite"></p>
+    </section>
+
+    <section class="card">
+      <div class="buttons" style="justify-content:space-between">
+        <h3 style="margin:0">ऑनलाइन रिकॉर्ड सूची</h3>
+        <button id="refreshBtn" class="gray" type="button">Refresh</button>
+      </div>
+      <label style="display:block;margin-top:12px">खोजें<input id="search" placeholder="आवेदन संख्या, नाम या रिकॉर्ड ID"></label>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Record ID</th><th>आवेदन संख्या</th><th>वर</th><th>वधु</th><th>Public URL</th><th>कार्य</th></tr></thead>
+          <tbody id="recordRows"><tr><td colspan="6">लॉगिन के बाद रिकॉर्ड दिखेंगे।</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/online-supabase-config.js"></script>
+<script>
+(function(){
+  'use strict';
+  const TABLE='marriage_records';
+  const $=id=>document.getElementById(id);
+  const fields=['app','groom','bride','venue','district','tehsil','subreg','eventDate','regno','regdate'];
+  let client=null, editingId=null, records=[];
+  const configReady=()=>window.ONLINE_SUPABASE_URL && !window.ONLINE_SUPABASE_URL.includes('PASTE_') && window.ONLINE_SUPABASE_PUBLISHABLE_KEY && !window.ONLINE_SUPABASE_PUBLISHABLE_KEY.includes('PASTE_');
+  function status(id,msg,error){const n=$(id);n.textContent=msg||'';n.className=error?'status error':'status';}
+  function randomRecordId(){
+    if(!window.crypto || !crypto.getRandomValues) throw new Error('इस ब्राउज़र में सुरक्षित Random ID उपलब्ध नहीं है।');
+    const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);
+    let bin='';for(const b of bytes)bin+=String.fromCharCode(b);
+    return btoa(bin); // 24 characters, ending with ==; does not encode the application number.
+  }
+  function detailUrl(id){const u=new URL('getMarriageDetailsFromQR.html',location.href);u.searchParams.set('ano',id);return u.href;}
+  function clearForm(){ $('recordForm').reset();editingId=null;$('formHeading').textContent='नया रिकॉर्ड जोड़ें';$('saveBtn').textContent='रिकॉर्ड सेव करें'; }
+  function formData(){return Object.fromEntries(fields.map(k=>[k,$(k).value.trim()]));}
+  function toDb(d,id){return {id,app:d.app,groom:d.groom,bride:d.bride,venue:d.venue,district:d.district,tehsil:d.tehsil,subreg:d.subreg,event_date:d.eventDate,regno:d.regno,regdate:d.regdate};}
+  function fromDb(r){return {app:r.app,groom:r.groom,bride:r.bride,venue:r.venue,district:r.district,tehsil:r.tehsil,subreg:r.subreg,eventDate:r.event_date,regno:r.regno,regdate:r.regdate};}
+  function cell(row,value){const td=document.createElement('td');td.textContent=value||'—';row.appendChild(td);return td;}
+  function render(){
+    const body=$('recordRows');body.replaceChildren();
+    const q=$('search').value.trim().toLowerCase();
+    const shown=records.filter(r=>[r.id,r.app,r.groom,r.bride].some(v=>(v||'').toLowerCase().includes(q)));
+    if(!shown.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=6;td.textContent='कोई रिकॉर्ड नहीं मिला।';tr.appendChild(td);body.appendChild(tr);return;}
+    shown.forEach(r=>{
+      const tr=document.createElement('tr');cell(tr,r.id);cell(tr,r.app);cell(tr,r.groom);cell(tr,r.bride);
+      const urlCell=document.createElement('td'),a=document.createElement('a');a.href=detailUrl(r.id);a.textContent='विवरण खोलें';a.target='_blank';a.rel='noopener';urlCell.appendChild(a);tr.appendChild(urlCell);
+      const actions=document.createElement('td'),edit=document.createElement('button'),del=document.createElement('button');
+      edit.type='button';edit.textContent='Edit';edit.className='gray';edit.addEventListener('click',()=>{editingId=r.id;const d=fromDb(r);fields.forEach(k=>$(k).value=d[k]||'');$('formHeading').textContent='रिकॉर्ड एडिट करें';$('saveBtn').textContent='बदलाव सेव करें';window.scrollTo({top:0,behavior:'smooth'});});
+      del.type='button';del.textContent='Delete';del.className='red';del.style.marginLeft='6px';del.addEventListener('click',async()=>{if(!confirm('क्या यह रिकॉर्ड हमेशा के लिए डिलीट करना है?'))return;const {error}=await client.from(TABLE).delete().eq('id',r.id);if(error){status('saveStatus',error.message,true);return;}status('saveStatus','रिकॉर्ड डिलीट हो गया।');await loadRecords();});
+      actions.append(edit,del);tr.appendChild(actions);body.appendChild(tr);
+    });
+  }
+  async function loadRecords(){
+    const {data,error}=await client.from(TABLE).select('*').order('created_at',{ascending:false});
+    if(error){status('saveStatus','रिकॉर्ड लोड नहीं हुए: '+error.message,true);return;}
+    records=data||[];render();
+  }
+  async function showSession(session){
+    $('loginCard').classList.add('hidden');$('adminArea').classList.remove('hidden');$('signedInEmail').textContent=session.user.email||'Admin';
+    await loadRecords();
+  }
+  async function init(){
+    if(!configReady()){status('loginStatus','पहले js/online-supabase-config.js में Supabase Project URL और Publishable Key भरें।',true);$('loginBtn').disabled=true;return;}
+    if(!window.supabase || !window.supabase.createClient){status('loginStatus','Supabase library लोड नहीं हुई। Internet/CDN connection जाँचें।',true);return;}
+    client=window.supabase.createClient(window.ONLINE_SUPABASE_URL,window.ONLINE_SUPABASE_PUBLISHABLE_KEY);
+    const {data:{session}}=await client.auth.getSession();
+    if(session) await showSession(session);
+  }
+  $('loginForm').addEventListener('submit',async e=>{
+    e.preventDefault();if(!client)return;const btn=$('loginBtn');btn.disabled=true;status('loginStatus','लॉगिन हो रहा है...');
+    const {data,error}=await client.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});btn.disabled=false;
+    if(error){status('loginStatus',error.message,true);return;}await showSession(data.session);
+  });
+  $('logoutBtn').addEventListener('click',async()=>{if(client)await client.auth.signOut();$('adminArea').classList.add('hidden');$('loginCard').classList.remove('hidden');clearForm();status('loginStatus','आप लॉगआउट हो गए हैं।');});
+  $('recordForm').addEventListener('submit',async e=>{
+    e.preventDefault();if(!client)return;const data=formData();const btn=$('saveBtn');btn.disabled=true;status('saveStatus','सेव हो रहा है...');
+    try{
+      const id=editingId||randomRecordId();const payload=toDb(data,id);
+      const result=editingId?await client.from(TABLE).update(payload).eq('id',editingId):await client.from(TABLE).insert(payload);
+      if(result.error)throw result.error;
+      status('saveStatus',editingId?'रिकॉर्ड अपडेट हो गया।':'रिकॉर्ड ऑनलाइन सेव हो गया। ID: '+id);
+      clearForm();await loadRecords();
+    }catch(err){status('saveStatus',err.message||String(err),true);}finally{btn.disabled=false;}
+  });
+  $('clearBtn').addEventListener('click',clearForm);
+  $('refreshBtn').addEventListener('click',loadRecords);
+  $('search').addEventListener('input',render);
+  init().catch(err=>status('loginStatus',err.message||String(err),true));
+})();
+</script>
+</body>
+</html>
