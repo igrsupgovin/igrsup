@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GitHub-only Record Admin</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f5f8;color:#1f2937;font-family:Arial,"Noto Sans Devanagari",sans-serif}
+.wrap{max-width:1100px;margin:20px auto;padding:14px}.head{background:#164a78;color:#fff;padding:18px 20px;border-radius:8px}
+.card{background:#fff;border:1px solid #e1e5eb;border-radius:8px;padding:18px;margin:14px 0;box-shadow:0 2px 8px #0000000a}
+.notice{padding:12px 14px;border:1px solid #e5c66b;background:#fff7dc;border-radius:6px;margin:14px 0;line-height:1.55}
+.good{color:#166534}.bad{color:#991b1b}.muted{color:#64748b;font-size:13px;line-height:1.5}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}label{font-weight:600;font-size:14px;display:block}input,textarea{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:5px;margin-top:5px;font:inherit;background:#fff}textarea{min-height:66px;resize:vertical}
+.full{grid-column:1/-1}.buttons{display:flex;gap:8px;flex-wrap:wrap;align-items:center}button{border:0;border-radius:5px;padding:10px 15px;background:#164a78;color:white;cursor:pointer;font-size:14px}button.secondary{background:#64748b}button.danger{background:#a72c25}button:disabled{opacity:.55;cursor:not-allowed}
+.status{min-height:20px;margin:9px 0 0;white-space:pre-wrap}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;margin-top:10px}th,td{padding:9px;border:1px solid #dbe1e8;text-align:left;font-size:13px}th{background:#eef3f8}a{color:#0756a0;overflow-wrap:anywhere}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.full{grid-column:auto}.wrap{padding:9px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <h2 style="margin:0 0 5px">GitHub-only रिकॉर्ड प्रबंधन</h2>
+    <div>रिकॉर्ड सीधे आपके GitHub repository की records.json फाइल में सेव होंगे।</div>
+  </header>
+
+  <div class="notice"><b>महत्वपूर्ण गोपनीयता सूचना:</b> यह GitHub-only तरीका है, लेकिन repository Public है। <b>records.json में मौजूद सभी रिकॉर्ड कोई भी व्यक्ति डाउनलोड और पढ़ सकता है</b>—केवल ID वाला व्यक्ति नहीं। पुराने commits में हटाए गए रिकॉर्ड भी रह सकते हैं। केवल वही जानकारी रखें जिसे सार्वजनिक करना अधिकृत हो। यह सरकारी पोर्टल नहीं है।</div>
+
+  <section class="card" id="tokenCard">
+    <h3 style="margin-top:0">GitHub access token</h3>
+    <p class="muted">GitHub पर Fine-grained personal access token बनाएँ। केवल इसी repository को चुनें और Repository permissions में Contents = Read and write दें। Token को किसी HTML/JS फाइल या chat में न डालें। इस पेज में token केवल खुले हुए tab की memory में रहेगा; Refresh/Close करने पर फिर डालना होगा।</p>
+    <label>Fine-grained token<input id="githubToken" type="password" autocomplete="off" placeholder="github_pat_..." spellcheck="false"></label>
+    <div class="buttons" style="margin-top:10px">
+      <button id="connectButton" type="button">GitHub से Connect करें</button>
+      <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub पर token बनाएँ</a>
+    </div>
+    <p id="tokenStatus" class="status" aria-live="polite"></p>
+  </section>
+
+  <div id="workspace" hidden>
+    <section class="card">
+      <div class="buttons" style="justify-content:space-between">
+        <div><b>GitHub repository connected</b><div class="muted">igrsupgovin / igrsup · main · records.json</div></div>
+        <button id="disconnectButton" type="button" class="secondary">Disconnect</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3 id="formTitle" style="margin-top:0">नया रिकॉर्ड जोड़ें</h3>
+      <form id="recordForm" class="grid">
+        <label>आवेदन संख्या<input id="app" required maxlength="100"></label>
+        <label>वर का नाम<input id="groom" required maxlength="200"></label>
+        <label>वधु का नाम<input id="bride" required maxlength="200"></label>
+        <label>विवाह स्थल<textarea id="venue" maxlength="1000"></textarea></label>
+        <label>जनपद<input id="district" maxlength="120"></label>
+        <label>तहसील<input id="tehsil" maxlength="120"></label>
+        <label>उपनिबंधक<input id="subreg" maxlength="160"></label>
+        <label>विवाह का दिनांक<input id="eventDate" placeholder="DD-MM-YYYY" maxlength="30"></label>
+        <label>पंजीकरण स०<input id="regno" maxlength="100"></label>
+        <label>पंजीकरण दिनांक<input id="regdate" placeholder="DD-MM-YYYY" maxlength="30"></label>
+        <div class="full buttons">
+          <button type="submit" id="saveButton">रिकॉर्ड GitHub में सेव करें</button>
+          <button type="button" id="resetButton" class="secondary">फॉर्म साफ करें</button>
+          <button type="button" id="refreshButton" class="secondary">रिकॉर्ड Refresh करें</button>
+        </div>
+      </form>
+      <p id="saveStatus" class="status" aria-live="polite"></p>
+    </section>
+
+    <section class="card">
+      <h3 style="margin-top:0">ऑनलाइन रिकॉर्ड सूची</h3>
+      <label>खोजें<input id="searchInput" placeholder="ID, आवेदन संख्या या नाम से खोजें"></label>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Record ID</th><th>आवेदन संख्या</th><th>वर</th><th>वधु</th><th>Public URL</th><th>कार्य</th></tr></thead>
+          <tbody id="recordRows"><tr><td colspan="6">पहले GitHub से Connect करें।</td></tr></tbody>
+        </table>
+      </div>
+      <p class="muted">हर Save पर GitHub repository में नया commit बनेगा। GitHub Pages पर public page अपडेट होने में कुछ समय लग सकता है।</p>
+    </section>
+  </div>
+</div>
+
+<script>
+'use strict';
+// Repository details verified from the current GitHub repository page.
+const GH_OWNER = 'igrsupgovin';
+const GH_REPO = 'igrsup';
+const GH_BRANCH = 'main';
+const DATA_PATH = 'records.json';
+const API_URL = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${DATA_PATH}`;
+const fields = ['app','groom','bride','venue','district','tehsil','subreg','eventDate','regno','regdate'];
+let githubToken = '';
+let recordsCache = [];
+let editingId = null;
+
+const $ = id => document.getElementById(id);
+function status(id, message, isError=false) {
+  const node = $(id);
+  node.textContent = message || '';
+  node.className = 'status ' + (isError ? 'bad' : 'good');
+}
+function authHeaders() {
+  return {
+    'Accept': 'application/vnd.github+json',
+    'Authorization': 'Bearer ' + githubToken,
+    'X-GitHub-Api-Version': '2022-11-28'
+  };
+}
+function decodeBase64Utf8(base64) {
+  const binary = atob(String(base64).replace(/\s/g, ''));
+  const bytes = new Uint8Array(binary.length);
+  for (let i=0; i<binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+function encodeBase64Utf8(text) {
+  const bytes = new TextEncoder().encode(text);
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i=0; i<bytes.length; i+=chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i+chunk));
+  }
+  return btoa(binary);
+}
+async function apiJson(url, options={}) {
+  const response = await fetch(url, options);
+  let payload = {};
+  try { payload = await response.json(); } catch (_) {}
+  if (!response.ok) {
+    const message = payload.message || ('HTTP ' + response.status);
+    if (response.status === 401 || response.status === 403) {
+      throw new Error('GitHub ने token स्वीकार नहीं किया। Token expiry और Contents: Read and write permission जाँचें। विवरण: ' + message);
+    }
+    if (response.status === 409 || response.status === 422) {
+      throw new Error('GitHub file update conflict हुआ। Refresh करके फिर कोशिश करें। विवरण: ' + message);
+    }
+    throw new Error(message);
+  }
+  return payload;
+}
+async function readRemoteFile() {
+  const data = await apiJson(API_URL + '?ref=' + encodeURIComponent(GH_BRANCH), { headers: authHeaders(), cache: 'no-store' });
+  if (!data.content || !data.sha) throw new Error('records.json खाली या पढ़ने योग्य नहीं है।');
+  const records = JSON.parse(decodeBase64Utf8(data.content));
+  if (!Array.isArray(records)) throw new Error('records.json में JSON array होना चाहिए।');
+  return { records, sha: data.sha };
+}
+async function writeRemoteFile(nextRecords, sha) {
+  const body = {
+    message: 'Update public records data',
+    content: encodeBase64Utf8(JSON.stringify(nextRecords, null, 2) + '\n'),
+    sha,
+    branch: GH_BRANCH
+  };
+  return apiJson(API_URL, {
+    method: 'PUT',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+}
+async function loadAndRender() {
+  const result = await readRemoteFile();
+  recordsCache = result.records;
+  renderRecords();
+  return result;
+}
+function randomRecordId() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  let binary = '';
+  bytes.forEach(byte => { binary += String.fromCharCode(byte); });
+  return btoa(binary); // 24-char Base64 token, usually ends with ==
+}
+function getFormData() {
+  return Object.fromEntries(fields.map(key => [key, $(key).value.trim()]));
+}
+function resetForm() {
+  $('recordForm').reset();
+  editingId = null;
+  $('formTitle').textContent = 'नया रिकॉर्ड जोड़ें';
+  $('saveButton').textContent = 'रिकॉर्ड GitHub में सेव करें';
+}
+function makeDetailUrl(id) {
+  const url = new URL('getMarriageDetailsFromQR.html', window.location.href);
+  url.searchParams.set('ano', id);
+  return url.href;
+}
+function addCell(row, value) {
+  const cell = document.createElement('td');
+  cell.textContent = value || '—';
+  row.appendChild(cell);
+}
+function renderRecords() {
+  const query = $('searchInput').value.trim().toLowerCase();
+  const filtered = recordsCache.filter(record =>
+    [record.id, record.app, record.groom, record.bride].some(value => String(value || '').toLowerCase().includes(query))
+  );
+  const tbody = $('recordRows');
+  tbody.replaceChildren();
+  if (!filtered.length) {
+    const row = document.createElement('tr');
+    const cell = document.createElement('td'); cell.colSpan = 6; cell.textContent = 'कोई रिकॉर्ड नहीं मिला।';
+    row.appendChild(cell); tbody.appendChild(row); return;
+  }
+  filtered.forEach(record => {
+    const row = document.createElement('tr');
+    addCell(row, record.id); addCell(row, record.app); addCell(row, record.groom); addCell(row, record.bride);
+    const urlCell = document.createElement('td');
+    const link = document.createElement('a'); link.href = makeDetailUrl(record.id); link.textContent = 'विवरण खोलें'; link.target = '_blank'; link.rel = 'noopener';
+    urlCell.appendChild(link); row.appendChild(urlCell);
+    const actionCell = document.createElement('td');
+    const edit = document.createElement('button'); edit.type = 'button'; edit.textContent = 'एडिट'; edit.className = 'secondary';
+    edit.addEventListener('click', () => {
+      editingId = record.id;
+      fields.forEach(key => { $(key).value = record[key] || ''; });
+      $('formTitle').textContent = 'रिकॉर्ड एडिट करें';
+      $('saveButton').textContent = 'बदलाव GitHub में सेव करें';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    const del = document.createElement('button'); del.type = 'button'; del.textContent = 'डिलीट'; del.className = 'danger'; del.style.marginLeft = '6px';
+    del.addEventListener('click', async () => {
+      if (!confirm('क्या यह रिकॉर्ड हटाना है? GitHub commit history में पुराना data रह सकता है।')) return;
+      del.disabled = true;
+      try {
+        const current = await readRemoteFile();
+        const next = current.records.filter(item => item.id !== record.id);
+        await writeRemoteFile(next, current.sha);
+        await loadAndRender();
+        status('saveStatus', 'रिकॉर्ड की current JSON सूची से entry हटा दी गई। ध्यान दें: पुराने GitHub commits में पुराना data रह सकता है।');
+      } catch (error) {
+        status('saveStatus', 'डिलीट नहीं हुआ: ' + error.message, true);
+        del.disabled = false;
+      }
+    });
+    actionCell.append(edit, del); row.appendChild(actionCell); tbody.appendChild(row);
+  });
+}
+
+$('connectButton').addEventListener('click', async () => {
+  const candidate = $('githubToken').value.trim();
+  if (!candidate) { status('tokenStatus', 'पहले GitHub Fine-grained token डालें।', true); return; }
+  githubToken = candidate;
+  $('connectButton').disabled = true;
+  status('tokenStatus', 'GitHub repository access जाँचा जा रहा है...');
+  try {
+    await loadAndRender();
+    $('tokenCard').hidden = true;
+    $('workspace').hidden = false;
+  } catch (error) {
+    githubToken = '';
+    status('tokenStatus', 'Connect नहीं हुआ: ' + error.message, true);
+  } finally {
+    $('connectButton').disabled = false;
+  }
+});
+$('disconnectButton').addEventListener('click', () => {
+  githubToken = '';
+  $('githubToken').value = '';
+  recordsCache = [];
+  $('workspace').hidden = true;
+  $('tokenCard').hidden = false;
+  status('tokenStatus', 'Token इस page session से हटा दिया गया।');
+});
+$('refreshButton').addEventListener('click', async () => {
+  $('refreshButton').disabled = true;
+  try { await loadAndRender(); status('saveStatus', 'GitHub से रिकॉर्ड refresh हो गए।'); }
+  catch (error) { status('saveStatus', 'Refresh नहीं हुआ: ' + error.message, true); }
+  finally { $('refreshButton').disabled = false; }
+});
+$('searchInput').addEventListener('input', renderRecords);
+$('resetButton').addEventListener('click', resetForm);
+$('recordForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const data = getFormData();
+  if (!data.app || !data.groom || !data.bride) { status('saveStatus', 'आवेदन संख्या, वर का नाम और वधु का नाम जरूरी हैं।', true); return; }
+  $('saveButton').disabled = true;
+  status('saveStatus', 'GitHub में रिकॉर्ड सेव हो रहा है...');
+  try {
+    const current = await readRemoteFile();
+    let next;
+    if (editingId) {
+      const exists = current.records.some(item => item.id === editingId);
+      if (!exists) throw new Error('Edit किया जाने वाला रिकॉर्ड अब JSON में नहीं मिला। Refresh करें।');
+      next = current.records.map(item => item.id === editingId ? { ...item, ...data, id: editingId } : item);
+    } else {
+      next = [{ ...data, id: randomRecordId(), createdAt: new Date().toISOString() }, ...current.records];
+    }
+    await writeRemoteFile(next, current.sha);
+    await loadAndRender();
+    resetForm();
+    status('saveStatus', 'रिकॉर्ड GitHub में commit हो गया। सूची में उसका public URL उपलब्ध है। Pages पर अपडेट आने में थोड़ा समय लग सकता है।');
+  } catch (error) {
+    status('saveStatus', 'सेव नहीं हुआ: ' + error.message, true);
+  } finally {
+    $('saveButton').disabled = false;
+  }
+});
+</script>
+</body>
+</html>
