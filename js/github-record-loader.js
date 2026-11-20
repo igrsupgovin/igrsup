@@ -60,8 +60,6 @@
       var container = document.querySelector('.container') || document.body;
       container.insertBefore(notice, container.firstChild);
     }
-    notice.textContent = 'स्वतंत्र निजी रिकॉर्ड डेमो — यह सरकारी पोर्टल नहीं है और किसी सरकारी पंजीकरण/प्रमाणपत्र की पुष्टि नहीं करता।';
-    notice.style.cssText = 'display:block;margin:8px auto;padding:8px 12px;max-width:95%;border:1px solid #d6bd78;background:#fff7df;color:#4b3b12;text-align:center;font:13px/1.5 Arial,sans-serif;';
   }
 
   function displayRecord(record) {
